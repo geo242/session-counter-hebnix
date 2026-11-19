@@ -4,6 +4,8 @@ Paste these into the upload form. Upload files:
 - banner: `listing/banner.png` (1600×900, rebuild with `python tools/make_banner.py`)
 - plugin: `dist/session_counter-<version>.zip` (build it with `pwsh ./package.ps1`)
 
+Version history lives in `CHANGELOG.md`, not here.
+
 ## Name
 
 Session Counter
@@ -48,11 +50,3 @@ Settings
 Notes
 • The Rocket League Stats API must be enabled. Hebnix can do this for you.
 • Each match's result is written to the Hebnix console, and the last 30 are listed in the plugin's settings, so you can see why a match wasn't counted.
-
---- Version 1.0.2 ---
-- New "Show" option, "Between plays": the counter is visible before kickoff, after goals and after the match, and hidden while the ball is live, so it never overlays live play.
-- The plugin no longer runs any per-frame work of its own.
-
---- Version 1.0.1 ---
-- Uses less CPU: text measurements are reused instead of being redone every frame.
-- The game overlay is only active while the counter is on screen or fading out. While it's hidden, Rocket League can present frames directly again, which can make gameplay smoother.
