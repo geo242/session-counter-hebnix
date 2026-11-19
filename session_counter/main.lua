@@ -85,7 +85,20 @@ local DEFAULTS = {
 ---------------------------------------------------------------------------
 
 local session            -- { modes = { [mode] = {w,l,streak} }, current, t, done = {guid...}, leaves = {guid = {...}} }
-local match = nil        -- { guid, votes = {blue, orange}, players, started, counted, playlist, human_seen, ... }
+---@class SessionMatch
+---@field guid string
+---@field votes integer[]     { blue, orange } UpdateState target votes, to work out my team
+---@field players table[]     latest Stats API player list
+---@field started boolean     a kickoff happened
+---@field counted boolean     result already recorded
+---@field playlist integer?
+---@field size_label string?  "2v2" etc. when there's no playlist
+---@field human_seen boolean  a human opponent was seen at some point
+---@field left_early boolean?
+---@field skip_logged boolean?
+
+---@type SessionMatch?
+local match = nil        -- the match being played, nil between matches
 local in_game = false    -- between the first UpdateState of a match and leaving it
 local live = false       -- from a kickoff countdown until the next goal or the end of the match
 local ended = {}         -- guid -> true for matches already destroyed; late events for them are ignored
@@ -102,9 +115,9 @@ local names_cache = { raw = nil, map = {} }
 
 local function now_ms() return hebnix.unix_millis() end
 
-local function opt_bool(key) return hebnix.get_bool(P .. key, DEFAULTS[key]) end
-local function opt_num(key) return hebnix.get_number(P .. key, DEFAULTS[key]) end
-local function opt_str(key) return hebnix.get_string(P .. key, DEFAULTS[key]) end
+local function opt_bool(key) return hebnix.get_bool(P .. key, DEFAULTS[key] --[[@as boolean]]) end
+local function opt_num(key) return hebnix.get_number(P .. key, DEFAULTS[key] --[[@as number]]) end
+local function opt_str(key) return hebnix.get_string(P .. key, DEFAULTS[key] --[[@as string]]) end
 
 local function color(key)
     local hex = hebnix.get_string(P .. "c_" .. key, DEFAULT_COLORS[key])
@@ -230,6 +243,7 @@ local function is_bot(p)
 end
 
 local function human_opponent()
+    if not match then return false end
     local mine = my_team()
     for _, p in ipairs(match.players) do
         local t = team_of(p)
@@ -239,6 +253,7 @@ local function human_opponent()
 end
 
 local function team_size_label()
+    if not match then return nil end
     local c = { [0] = 0, [1] = 0 }
     for _, p in ipairs(match.players) do
         local t = team_of(p)
@@ -250,6 +265,7 @@ local function team_size_label()
 end
 
 local function log_match(result)
+    if not match then return end
     local entry = string.format("%s  %s  %s", os.date("%H:%M"),
         match.playlist and playlist_name(match.playlist) or (session.current or "-"), result)
     table.insert(recent, entry)
@@ -267,6 +283,7 @@ local function set_mode(name)
 end
 
 local function update_mode(game)
+    if not match then return end
     local pid = tonumber(game.PlaylistId) or 0
     if pid > 0 then
         if match.playlist ~= pid then
@@ -317,7 +334,7 @@ end
 -- the same match (ranked reconnect), that loss is taken back and the real result counts instead.
 local function record_leave()
     local mine = my_team()
-    if mine == nil or not (match.human_seen or human_opponent()) then return end
+    if not match or mine == nil or not (match.human_seen or human_opponent()) then return end
     local mode = session.current or team_size_label() or "Session"
     session.leaves[match.guid] = { mode = mode, prev_streak = rec(mode).streak, at = now_ms() }
     local count, oldest_key, oldest_at = 0, nil, math.huge
@@ -404,6 +421,7 @@ local function handle(ev, event)
     end
 
     if ev == "UpdateState" then
+        if not match then return end -- the branches above always start one
         in_game = true
         local g = type(d.Game) == "table" and d.Game or {}
         if type(d.Players) == "table" then match.players = d.Players end
