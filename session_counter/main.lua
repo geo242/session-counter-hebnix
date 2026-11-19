@@ -158,7 +158,7 @@ local function playlist_name(pid)
 end
 
 local function log_line(text)
-    hebnix.log("[Session Counter] " .. text)
+    hebnix.log(text) -- Hebnix already prefixes "[Session Counter]"
 end
 
 ---------------------------------------------------------------------------
