@@ -1,0 +1,5 @@
+plugin_id = "eb6a374aa38b6fa8eee47342d68b1edc"
+name = "Session Counter"
+author = "Geoff Tripoli"
+version = "1.0.2"
+entry = "main.lua"
